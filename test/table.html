@@ -1,0 +1,691 @@
+﻿<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <title></title>
+
+    <style type="text/css">
+        * {
+            margin: 0px;
+            padding: 0px;
+            border: 0px;
+        }
+
+        button {
+            margin: 2px;
+            padding: 4px;
+            border: 0px;
+            background-color: #0094ff;
+            color: #ffffff;
+        }
+
+        button[class="btn_selected"] {
+            margin: 2px;
+            padding: 4px;
+            border: 0px;
+            background-color: #4800ff;
+            color: #ffffff;
+        }
+
+        input {
+            padding: 2px;
+            border: 1px solid;
+            border-color: gray;
+        }
+
+        label {
+            margin-left: 5px;
+            color: #4800ff;
+        }
+
+        hr {
+            background-color:darkblue;
+            height:3px;
+        }
+        
+        table {
+            border-spacing:2px;
+        }
+
+        td {
+            color:white;
+            width:80px;
+            height:50px;
+            min-height:20px;
+            min-width:30px;
+        }
+
+        tr {
+            min-height:20px;
+        }
+
+        .t_row:nth-child(odd) {
+            background-color:#0A58C1;
+        }
+
+        .t_row:nth-child(even) {
+            background-color:#009EAF;
+        }
+
+        .t_row_in {
+            background-color:#FFD800;
+        }
+
+        .t_cell_in {
+            background-color:#FDAD42;
+        }
+
+        .t_cell_selected {
+            background-color:#00A000;
+        }
+    </style>
+</head>
+
+<body>
+    <div>
+        <label>行数:</label>
+        <input type="text" id="ipt_r" />
+        <label>列数:</label>
+        <input type="text" id="ipt_c" />
+        <button class="btn_normal" onclick="TabInit()" onmouseover="BtnMOver(this)" onmouseout="BtnMOut(this)">重置</button>
+        <button class="btn_normal" onclick="TabCreate()" onmouseover="BtnMOver(this)" onmouseout="BtnMOut(this)">生成</button>
+    </div>
+    <hr />
+    <div id="tab_area">
+        <button class="btn_normal" onmouseover="BtnMOver(this)" onmouseout="BtnMOut(this)" onclick="RowAdd()">添加行</button>
+        <button class="btn_normal" onmouseover="BtnMOver(this)" onmouseout="BtnMOut(this)" onclick="RowDel()">删除行</button>
+        <button class="btn_normal" onmouseover="BtnMOver(this)" onmouseout="BtnMOut(this)" onclick="ColAdd()">添加列</button>
+        <button class="btn_normal" onmouseover="BtnMOver(this)" onmouseout="BtnMOut(this)" onclick="ColDel()">删除列</button>
+        <button class="btn_normal" onmouseover="BtnMOver(this)" onmouseout="BtnMOut(this)">重新着色</button>
+        
+        <label id="lb_status">表格</label>
+		<label id="lb_pos"></label>
+            <tr>
+                <td id="td_tmp"></td>
+            </tr>
+        <table id="tab">
+        </table>
+		<label id="consoleArea"></label>
+    </div>
+
+
+    <script id="event">
+        //鼠标进入按钮
+        function BtnMOver(btn) {
+            if (!Resize_val.status) {
+                btn.className = "btn_selected";
+            }
+        }
+
+        //鼠标移出按钮
+        function BtnMOut(btn) {
+            if (!Resize_val.status) {
+                btn.className = "btn_normal";
+            }
+        }
+
+        //鼠标进入行
+        function TrMOver(tr) {
+            if (!Resize_val.status) {
+                tr.className = "t_row_in";
+            }
+        }
+
+        //鼠标移出行
+        function TrMOut(tr) {
+            if (!Resize_val.status) {
+                tr.className = "t_row";
+            }
+        }
+
+        //鼠标进入表格
+        function TdMOver(td) {
+            if (!Resize_val.status) {
+                if (td.className == "t_cell") {
+                    td.className = "t_cell_in";
+                }
+            }
+        }
+
+        //鼠标移出表格
+        function TdMOut(td) {
+            if (!Resize_val.status) {
+                if (td.className == "t_cell_in") {
+                    td.className = "t_cell";
+                }
+            }
+        }
+
+        //选择表格
+        function TdSelect(td) {
+            if (!Resize_val.status) {
+                selectIt(td);
+            }
+        }
+
+        //添加行
+        function RowAdd() {
+            var r = addRow(Table_val.selected_row);
+            //默认第一行表格数作为列长
+            var c = tab.rows[0].cells.length;
+            if (r == 0) {
+                //如果新建的是行位于第一行,则取第二行的表格数作为列长
+                c = tab.rows[1].cells.length;
+            }
+            else if (c == 0) {
+                //第一行列长为0,说明全表列长为0
+                c = 1;
+            }
+            addCells(r, c);
+        }
+
+        //删除行
+        function RowDel() {
+            if (Table_val.selected_cell == null) {
+                alert("请选择某一行!");
+                return;
+            }
+            if (tab.rows.length > 1) {
+                delRow(Table_val.selected_row);
+                //为了保险起见,取消被选择的cell
+                selectIt(Table_val.selected_cell);
+            }
+            else {
+                alert("表格仅剩一行!");
+            }
+        }
+
+        //添加列
+        function ColAdd() {
+            //此函数能够处理没有选择cell时的情况
+            addCol(Table_val.selected_col);
+        }
+
+        //删除列
+        function ColDel() {
+            if (Table_val.selected_cell == null) {
+                alert("请选择某一列!");
+                return;
+            }
+            if (tab.rows[0].cells.length > 1) {
+                delCol(Table_val.selected_col);
+                selectIt(Table_val.selected_cell);
+            }
+            else {
+                alert("表格仅剩一列!");
+            }
+        }
+
+        //重置表格
+        function TabInit() {
+            //删除全表
+            clear();
+            createTab(Table_val.init_row, Table_val.init_col);
+            //设置文本框内容
+            ipt_r.value = Table_val.init_row;
+            ipt_c.value = Table_val.init_col;
+        }
+
+        //生成表格
+        function TabCreate() {
+            if (ipt_r.value < 1 || ipt_c.value < 1) {
+                alert("请输入有效数据!");
+                return;
+            }
+            clear();
+            createTab(ipt_r.value, ipt_c.value);
+        }
+
+        //处理鼠标在文档中移动
+        function DocMouseMove(ev) {
+            //鼠标坐标
+            var p = GetXY(ev);
+            //获取对应坐标的cell单元
+            var cell = GetCellByPoint(p);
+            //获取到undefined
+            if (!cell) {
+                lb_pos.innerHTML = "";
+                return;
+            }
+            //显示对应cell单元信息
+            lb_pos.innerHTML = "R:" + cell.parentNode.rowIndex + " C:" + cell.cellIndex;
+
+            //获取cell有效区域
+            var rect = GetCellRect(cell);
+
+            if (Math.abs(rect.Bottom - p.Y) < Resize_val.cell_resize_width) {
+                //光标位于cell有效区域的下方可resize区域
+                tab.style.cursor = "s-resize";
+            }
+            else if (Math.abs(rect.Right - p.X) < Resize_val.cell_resize_width) {
+                //光标位于cell有效区域的右方可resize区域
+                tab.style.cursor = "w-resize";
+            }
+            else {
+                //位于cell单元内
+                tab.style.cursor = "cell";
+            }
+        }
+
+        //检查resize状态
+        function ResizeBegin(ev) {
+            if (Resize_val.status || ev.button != 0) {
+                //已进入resize状态则取消
+                ResizeEnd(ev);
+                return;
+            }
+
+            var p = GetXY(ev);
+            var cell = GetCellByPoint(p);
+            if (!cell) {
+                return;
+            }
+
+            var rect = GetCellRect(cell);
+
+            if (Math.abs(rect.Bottom - p.Y) < Resize_val.cell_resize_width) {
+                tab.style.cursor = "s-resize";
+
+                //Resize对象保存Resize操作所需信息
+                Resize_val.status = true;
+                Resize_val.begin_point = p;
+                Resize_val.direct = 0;
+                Resize_val.cell = cell;
+
+                var c_rect = GetRect(cell);
+                Resize_val.cell_width = c_rect.Right - c_rect.Left;
+                Resize_val.cell_height = c_rect.Bottom - c_rect.Top;
+
+                //改变move事件接收方
+                document.onmousemove = ResizeTab;
+            }
+            else if (Math.abs(rect.Right - p.X) < Resize_val.cell_resize_width) {
+                tab.style.cursor = "w-resize";
+
+                Resize_val.status = true;
+                Resize_val.begin_point = p;
+                Resize_val.direct = 1;
+                Resize_val.cell = cell;
+
+                var c_rect = GetRect(cell);
+                Resize_val.cell_width = c_rect.Right - c_rect.Left;
+                Resize_val.cell_height = c_rect.Bottom - c_rect.Top;
+
+                document.onmousemove = ResizeTab;
+            }
+        }
+
+        //动态Resize表格
+        function ResizeTab(ev) {
+            if (Resize_val.status) {
+                //获取对应cell的真实区域
+                var rect = GetRect(Resize_val.cell);
+                var p = GetXY(ev);
+
+                //上下方向Resize
+                if (Resize_val.direct == 0) {
+                    ResizeARow(Resize_val.cell.parentNode.rowIndex, p.Y - rect.Top);
+                }
+                //左右方向Resize
+                else if (Resize_val.direct == 1) {
+                    ResizeACol(Resize_val.cell.cellIndex, p.X - rect.Left);
+                }
+            }
+            else {
+                //进入这一步说明程序有缺陷
+                ResizeEnd(ev);
+            }
+        }
+
+        //结束Resize操作
+        function ResizeEnd(ev) {
+            if (Resize_val.status) {
+                tab.style.cursor = "cell";
+                Resize_val.status = false;
+                Resize_val.begin_point = null;
+                Resize_val.cell = null;
+
+                //恢复move接收方
+                document.onmousemove = DocMouseMove;
+            }
+        }
+    </script>
+    <script id="functional">
+        //选择指定表格
+        function selectIt(cell) {
+            if (cell == null) {
+                return;
+            }
+            if (cell === Table_val.selected_cell) {
+                //如果是以选中cell则要取消
+                Table_val.selected_cell = null;
+                Table_val.selected_row = -1;
+                Table_val.selected_col = -1;
+                cell.className = Const_val.c_cell;
+            }
+            else {
+                if (Table_val.selected_cell != null) {
+                    selectIt(Table_val.selected_cell);
+                }
+                Table_val.selected_cell = cell;
+                Table_val.selected_row = cell.parentNode.rowIndex;
+                Table_val.selected_col = cell.cellIndex;
+                cell.className = Const_val.c_cell_selected;
+            }
+        }
+
+        //对第r行添加新行
+        function addRow(r) {
+            var tr = null;
+            if (r < 0 || r >= tab.rows.length) {
+                r = tab.rows.length - 1;
+            }
+            if (tab.rows.length == 0) {
+                r = 0;
+            }
+            tr = tab.insertRow(r);
+            //设置id
+            tr.id = Const_val.pid_row + Table_val.tr_idx++;
+            tr.className = Const_val.c_row;
+            tr.onmouseover = function () { TrMOver(this); }
+            tr.onmouseout = function () { TrMOut(this); }
+            return r;
+        }
+
+        //对第r行第c个位置添加表格
+        function addCell(tr, c) {
+            var td = null;
+            if (tr.cells.length > 0) {
+                if (c < 0 || c >= tr.cells.length) {
+                    r = tr.cells.length - 1;
+                }
+                td = tr.insertCell(c);
+            }
+            else {
+                td = tr.insertCell(0);
+            }
+            //设置新添加的td属性
+            td.id = Const_val.pid_cell + Table_val.td_idx++;
+            td.className = Const_val.c_cell;
+            td.onmouseover = function () { TdMOver(this); }
+            td.onmouseout = function () { TdMOut(this); }
+            td.onmouseup = function () { TdSelect(this); }
+        }
+
+        //对r行添加c个表格
+        function addCells(r, c) {
+            var tr = tab.rows[r];
+            for (var i = 0; i < c; i++) {
+                addCell(tr, 0);
+            }
+        }
+
+        //对c列添加一列
+        function addCol(c) {
+            var tr = null;
+
+            if (tab.rows.length == 0) {
+                addRow(0, 0);
+            }
+
+            for (var i = 0; i < tab.rows.length; i++) {
+                var tr = tab.rows[i];
+                addCell(tr, c);
+            }
+        }
+
+        //创建r行c列的表格
+        function createTab(r, c) {
+            if (r > 0 && c > 0) {
+                for (var i = 0; i < r; i++) {
+                    addRow(0);
+                    addCells(0, c);
+                }
+            }
+        }
+
+        //删除第r行
+        function delRow(r) {
+            if (tab.rows.length > 0) {
+                if (r < 0 || r >= tab.rows.length) {
+                    return -1;
+                }
+                tab.deleteRow(r);
+                return 0;
+            }
+            return -2;
+        }
+
+        //删除tr的第c个表格
+        function delCell(tr, c) {
+            if (tr.cells.length > 0) {
+                if (c < 0 || c >= tr.cells.length) {
+                    return -1;
+                }
+                tr.deleteCell(c);
+                return 0;
+            }
+            return -2;
+        }
+
+        //删除第c列
+        function delCol(c) {
+            var flag = false;
+
+            if (tab.rows.length == 0) {
+                return -2;
+            }
+
+            for (var i = 0; i < tab.rows.length; i++) {
+                var tr = tab.rows[i];
+                if (c < 0 || c >= tr.cells.length) {
+                    return -1;
+                }
+                delCell(tr, c);
+            }
+            return 0;
+        }
+
+        //清空表格
+        function clear() {
+            while (!delRow(0));
+        }
+
+        //设置指定行的高度
+        function ResizeARow(idx, height) {
+            if (idx < tab.rows.length) {
+                tab.rows[idx].style.height = height + "px";
+            }
+        }
+
+        //设置指定列高度
+        function ResizeACol(idx, width) {
+            for (var i = 0; i < tab.rows.length; i++) {
+                if (idx < tab.rows[i].cells.length) {
+                    tab.rows[i].cells[idx].style.width = width + "px";
+                }
+            }
+        }
+    </script>
+    <script id="HitTest">
+        //获取鼠标相对页面的坐标
+        function GetXY(mouse_event) {
+            return { X: parseFloat(mouse_event.pageX), Y: parseFloat(mouse_event.pageY) };
+        }
+
+        //获取制定元素相对页面的坐标
+        function GetPos(e) {
+            //设置其对应于offsetParent的偏移坐标
+            var pos = { Top: e.offsetTop, Left: e.offsetLeft };
+            if (e.offsetParent != null) {
+                //递归求其offsetParent的坐标
+                var p_pos = GetPos(e.offsetParent);
+                //换算坐标
+                pos.Top += p_pos.Top;
+                pos.Left += p_pos.Left;
+            }
+            return pos;
+        }
+        
+        //获取元素区域
+        function GetRect(e) {
+            var rect = { Top: -1, Left: -1, Right: -1, Bottom: -1 };
+            var pos = GetPos(e);
+
+            //获得当前元素e的style
+            var sly = getComputedStyle(e);
+            //宽和高貌似和margin和padding没有关系
+            var b_LR_width = parseInt(sly.borderLeftWidth) + parseInt(sly.borderRightWidth);
+            var b_TB_height = parseInt(sly.borderTopWidth) + parseInt(sly.borderBottomWidth);
+
+            rect.Top = pos.Top;
+            rect.Left = pos.Left;
+            rect.Right = pos.Left + e.clientWidth + b_LR_width;
+            rect.Bottom = pos.Top + e.clientHeight + b_TB_height;
+
+            return rect;
+        }
+
+        //获取cell的区域
+        function GetCellRect(e) {
+            var rect = GetRect(e);
+            //把表格间框线计算进去
+            rect.Top -= 1;
+            rect.Left -= 1;
+            rect.Bottom += 1;
+            rect.Right += 1;
+
+            return rect;
+        }
+
+        //二分查找法取得所在行
+        function GetTrByPoint(point) {
+            var f_idx = 0, m_idx, l_idx = tab.rows.length - 1;
+
+            if (l_idx < 0) {
+                return undefined;
+            }
+
+            var f_rect, m_rect, l_rect;
+
+            f_rect = GetCellRect(tab.rows[f_idx]);
+            l_rect = GetCellRect(tab.rows[l_idx]);
+
+            if (point.Y < f_rect.Top || point.Y > l_rect.Bottom) {
+                return undefined;
+            }
+
+            do {
+                m_idx = parseInt((f_idx + l_idx) / 2);
+                m_rect = GetCellRect(tab.rows[m_idx]);
+
+                if (point.Y < m_rect.Top) {
+                    l_idx = m_idx - 1;
+                    l_rect = m_rect;
+                }
+                else if (point.Y > m_rect.Bottom) {
+                    f_idx = m_idx + 1;
+                    f_rect = m_rect;
+                }
+                else {
+                    return tab.rows[m_idx];
+                }
+            } while (f_idx <= l_idx);
+            return undefined;
+        }
+
+        //二分查找法取得所在行的表格
+        function GetTdByPoint(tr, point) {
+            var f_idx = 0, m_idx, l_idx = tr.cells.length - 1;
+
+            if (l_idx < 0) {
+                return undefined;
+            }
+
+            var f_rect, m_rect, l_rect;
+
+            f_rect = GetCellRect(tr.cells[f_idx]);
+            l_rect = GetCellRect(tr.cells[l_idx]);
+
+            if (point.X < f_rect.Left || point.X > l_rect.Right) {
+                return undefined;
+            }
+
+            do {
+                m_idx = parseInt((f_idx + l_idx) / 2);
+                m_rect = GetCellRect(tr.cells[m_idx]);
+
+                if (point.X < m_rect.Left) {
+                    l_idx = m_idx - 1;
+                    l_rect = m_rect;
+                }
+                else if (point.X > m_rect.Right) {
+                    f_idx = m_idx + 1;
+                    f_rect = m_rect;
+                }
+                else {
+                    return tr.cells[m_idx];
+                }
+            } while (f_idx <= l_idx);
+            return undefined;
+        }
+
+        //hittest函数,专门针对table进行优化
+        function GetCellByPoint(point) {
+            var tab_rect = GetRect(tab);
+
+            if (point.X < tab_rect.Left || point.X > tab_rect.Right) {
+                return undefined;
+            }
+            if (point.Y < tab_rect.Top || point.Y > tab_rect.Bottom) {
+                return undefined;
+            }
+            var tr = GetTrByPoint(point);
+            var td = undefined;
+            if (tr) {
+                td = GetTdByPoint(tr, point);
+            }
+            return td;
+        }
+
+        function GetElemByPoint(point) {
+            var all_elements = document.documentElement.all;
+            for (i in all_elements) {
+                var rect = GetRect(all_elements[i]);
+                if (point.X >= rect.Left && point.X <= rect.Right && point.Y >= rect.Top && point.Y <= rect.Bottom) {
+                    return all_elements[i];
+                }
+            }
+            return null;
+        }
+    </script>
+    <script id="init">
+        //模拟console,调试用
+        console.lines = 0;
+        console.writeline = function (txt) {
+            if (console.lines >= 20) {
+                var i = consoleArea.innerText.indexOf("\n");
+                consoleArea.innerText = consoleArea.innerText.substring(i + 1);
+                console.lines = 20;
+            }
+            else {
+                console.lines++;
+            }
+            consoleArea.innerText = consoleArea.innerText + txt + '\n';
+        }
+        consoleArea.innerText = "";
+
+        //保存Resize信息
+        Resize_val = { cell_resize_width: 4, status: false, begin_point: null, direct: -1, cell: null, cell_width: null, cell_height: null, working: false };
+        //保存表格信息
+        Table_val = { tr_idx: 0, td_idx: 0, selected_cell: null, selected_row: -1, selected_col: -1, init_row: 2, init_col: 2 };
+        //一些常量
+        Const_val = { c_cell: "t_cell", c_cell_selected: "t_cell_selected", pid_cell: "td_", c_row: "t_row", c_row_selected: "t_row_in", pid_row: "tr_" };
+
+        TabInit();
+
+        document.onmousemove = DocMouseMove;
+        document.onmousedown = ResizeBegin;
+        document.onmouseup = ResizeEnd;
+    </script>
+</body>
+</html>
