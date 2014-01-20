@@ -1,0 +1,226 @@
+﻿<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <title></title>
+
+    <script src="Scripts/js/jquery-1.9.1.js"></script>
+
+    <style>
+        #control {
+            width: 800px;
+        }
+
+        #ContentDIV {
+            width: 1176px;
+            height: 622px;
+        }
+
+        #control textarea {
+            width: 100%;
+        }
+
+        #control #Output {
+            height: 200px;
+        }
+
+        #control #Error {
+            height: 50px;
+        }
+
+        #control #Input {
+            height: 200px;
+        }
+
+        #control h3 {
+            display: inline;
+        }
+    </style>
+</head>
+<body>
+    <div id="control">
+        <div id="InputDIV">
+            <h3>Input:</h3>
+            <button onclick="Control.Run('Input')">Run</button>
+            <button onclick="Control.Clear('Input')">Clear</button>
+            <textarea id="Input"></textarea>
+        </div>
+
+        <div id="OutputDIV">
+            <h3>Output:</h3>
+            <button onclick="Control.Clear('Output')">Clear</button>
+            <textarea id="Output" readonly="readonly"></textarea>
+        </div>
+
+        <div id="ErrorDIV">
+            <h3>Error:</h3>
+            <button onclick="Control.Clear('Error')">Clear</button>
+            <textarea id="Error" readonly="readonly"></textarea>
+        </div>
+    </div>
+
+    <script>
+
+        Global = {
+            Spread: null,
+        };
+
+        $(function () {
+            $("#Input").keydown(function (ev) {
+                if (ev.which == 27) {
+                    Control.Run("Input");
+                }
+            });
+        });
+
+        Control = {
+            Input: $("#Input"),
+            Output: $("#Output"),
+            Error: $("#Error"),
+            Print: function (data) {
+                try {
+                    Control.Output.val(data.toString());
+                }
+                catch (err) {
+                    Control.Output.val(data);
+                }
+            },
+
+            Throw: function (data) {
+                Control.Error.val(data.toString() + "\n");
+            },
+
+            Clear: function (target) {
+                var t = typeof (target)
+                $("#" + target).val("");
+            },
+
+            Exec: function (cmd) {
+                try {
+                    eval(cmd);
+                }
+                catch (err) {
+                    Control.Clear("Error");
+                    Control.Throw(err);
+                }
+            },
+
+            Dir: function (data, r) {
+                var txt = "";
+                if (r == undefined) {
+                    r = 0;
+                }
+                if (r < 0) {
+                    return "{}";
+                }
+                for (var i in data) {
+                    var protype = i;
+                    var type = typeof (data[i]);
+                    if (type == "function") {
+                        var fun = data[i].toString();
+                        var s = fun.indexOf("(");
+                        var e = fun.indexOf(")");
+                        if (s != -1 && e != -1) {
+                            protype += fun.substring(s, e + 1);
+                        }
+                        else {
+                            protype += "()";
+                        }
+                    }
+                    else if (type == "object") {
+                        if (r > 0) {
+                            protype += Control.Dir(data[i], r - 1);
+                        }
+                    }
+                    txt += protype + ", ";
+                }
+
+                return "{" + txt.substr(0, txt.length - 2) + "}";
+            },
+
+            Run: function (target) {
+                var cmd = $("#" + target).val();
+                Control.Print(cmd);
+                Control.Exec(cmd);
+            },
+
+            Show: function (data, r) {
+                var txt = "";
+                if (r == undefined) {
+                    r = 0;
+                }
+                if (r < 0) {
+                    return "{}";
+                }
+                for (var i in data) {
+                    var protype = i;
+                    switch (typeof (data[i])) {
+                        case "function": {
+                            var fun = data[i].toString();
+                            var a = fun.match(new RegExp("\s+"));
+                            if (a != null && a.length > 0) {
+                                protype += a[0].replace(new RegExp("\s+"), "");
+                            }
+                            else {
+                                protype += "()";
+                            }
+                            break;
+                        }
+                        case "object": {
+                            if (r > 0) {
+                                protype += Control.Dir(data[i], r - 1);
+                            }
+                            else {
+                                protype += "{..}";
+                            }
+                            break;
+                        }
+                        case "string": {
+                            protype += ":'" + data[i] + "'";
+                            break;
+                        }
+                        default: {
+                            protype += ":" + data[i];
+                        }
+                    }
+                    txt += protype + ", ";
+                }
+
+                return "{" + txt.substr(0, txt.length - 2) + "}";
+            },
+
+            See: function (fun) {
+                var txt = "";
+                if (typeof (fun) == "function") {
+                    var fun = data[i].toString();
+                    var i = fun.indexOf("(");
+                    if (i != -1) {
+                        protype += fun.substring(i);
+                    }
+                    else {
+                        protype += "(){}";
+                    }
+                }
+
+                return txt;
+            }
+        };
+
+        function print(data) {
+            Control.Print(data);
+        }
+
+        function dir(data, r) {
+            Control.Print(Control.Dir(data, r));
+        }
+
+        function show(data, r) {
+            Control.Print(Control.Show(data, r));
+        }
+
+        function show(data, r) {
+            Control.Print(Control.See(data));
+        }
+
+    </script>
+</body>
+</html>
